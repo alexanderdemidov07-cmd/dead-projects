@@ -2,113 +2,162 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import VinylPreviewButton from "@/app/components/VinylPreviewButton";
 
-type Project = {
+type ProjectRow = {
   id: string;
   title: string;
   context: string | null;
+  audio_path: string | null;
   created_at: string;
 };
 
-type Reply = {
-  id: string;
-  project_id: string;
+type ProjectWithPreview = ProjectRow & {
+  previewUrl: string | null;
 };
 
-export default function Home() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+export default function HomePage() {
+  const [items, setItems] = useState<ProjectWithPreview[]>([]);
+  const [status, setStatus] = useState<string>("Loading…");
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+  async function load() {
+    try {
+      setStatus("Loading…");
 
-      const { data: p, error: pErr } = await supabase
+      const { data, error } = await supabase
         .from("projects")
-        .select("id,title,context,created_at")
+        .select("id,title,context,audio_path,created_at")
         .order("created_at", { ascending: false });
 
-      if (pErr) {
-        console.error(pErr);
-        setLoading(false);
+      if (error) {
+        console.error(error);
+        setStatus(`❌ Supabase error: ${error.message}`);
         return;
       }
 
-      setProjects(p ?? []);
+      const rows = (data ?? []) as ProjectRow[];
 
-      // Fetch replies just to count (MVP simple)
-      const { data: r, error: rErr } = await supabase
-        .from("replies")
-        .select("id,project_id");
+      const withPreviews: ProjectWithPreview[] = await Promise.all(
+        rows.map(async (p) => {
+          if (!p.audio_path) return { ...p, previewUrl: null };
 
-      if (rErr) {
-        console.error(rErr);
-        setLoading(false);
-        return;
-      }
+          const { data: signed, error: signErr } = await supabase.storage
+            .from("project-audio")
+            .createSignedUrl(p.audio_path, 60 * 30);
 
-      const counts: Record<string, number> = {};
-      (r ?? []).forEach((reply: Reply) => {
-        counts[reply.project_id] = (counts[reply.project_id] ?? 0) + 1;
-      });
+          if (signErr) {
+            console.error(signErr);
+            return { ...p, previewUrl: null };
+          }
 
-      setReplyCounts(counts);
-      setLoading(false);
+          return { ...p, previewUrl: signed.signedUrl };
+        })
+      );
+
+      setItems(withPreviews);
+      setStatus(withPreviews.length ? "✅ Loaded." : "No posts yet.");
+    } catch (err: any) {
+      console.error(err);
+      setStatus(`❌ Crash: ${err?.message ?? String(err)}`);
     }
+  }
 
+  useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <main style={{ maxWidth: 680, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dead Projects</h1>
+    <div className="dp-page">
+      <div className="dp-wrap">
+        <div className="mt-4">
+          <h1 className="dp-title">Unfinished work</h1>
+          <p className="dp-subtitle">
+            Honest responses. Audio-first. No pretending it’s done.
+          </p>
+        </div>
 
-      <a href="/new" style={{ display: "inline-block", marginTop: 12 }}>
-        
-      </a>
+        <div className="mt-6">
+          {items.length ? (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {items.map((p) => (
+                <li key={p.id} style={{ marginBottom: 12 }}>
+                  {/* Whole card is clickable via overlay link */}
+                  <div className="dp-card dp-card-click">
+                    <a
+                      className="dp-card-link"
+                      href={`/project/${encodeURIComponent(p.id)}`}
+                      aria-label={`Open project: ${p.title || "Untitled"}`}
+                    />
 
-      <div style={{ marginTop: 18 }}>
-        {loading ? (
-          <p>Loading…</p>
-        ) : projects.length === 0 ? (
-          <p>No projects yet.</p>
-        ) : (
-          <ul style={{ padding: 0, listStyle: "none" }}>
-            {projects.map((p) => (
-              <li
-                key={p.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: 12,
-                  padding: 14,
-                  marginBottom: 10,
-                }}
-              >
-                <a
-                  href={`/project/${p.id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  <div style={{ fontWeight: 700 }}>{p.title}</div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 14,
+                        position: "relative",
+                        zIndex: 1, // above overlay link; clickable elements can opt in
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800 }}>
+                          {p.title || "Untitled"}
+                        </div>
 
-                  {p.context && (
-                    <div style={{ marginTop: 6, color: "#555" }}>
-                      {p.context.length > 120
-                        ? p.context.slice(0, 120) + "…"
-                        : p.context}
+                        {p.context ? (
+                          <div
+                            className="dp-meta"
+                            style={{
+                              marginTop: 6,
+                              overflow: "hidden",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            {p.context}
+                          </div>
+                        ) : (
+                          <div className="dp-meta" style={{ marginTop: 6 }}>
+                            (no context)
+                          </div>
+                        )}
+
+                        <div className="dp-meta" style={{ marginTop: 10 }}>
+                          {new Date(p.created_at).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Make sure the vinyl button stays clickable */}
+                      <div className="dp-card-action">
+                        <VinylPreviewButton src={p.previewUrl} />
+                      </div>
                     </div>
-                  )}
-
-                  <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
-                    {new Date(p.created_at).toLocaleString()} •{" "}
-                    {(replyCounts[p.id] ?? 0).toString()} responses
                   </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="dp-card">
+              <div className="dp-meta">{status}</div>
+            </div>
+          )}
+        </div>
       </div>
-    </main>
+
+      {/* Small debug widget bottom-right */}
+      <div className="dp-debug">
+        <div className="dp-meta" style={{ fontWeight: 800 }}>
+          {status}
+        </div>
+        <div className="dp-meta" style={{ marginTop: 6 }}>
+          URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅" : "❌"}
+          {" · "}
+          Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "✅" : "❌"}
+        </div>
+      </div>
+    </div>
   );
 }

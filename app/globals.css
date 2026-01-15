@@ -304,3 +304,40 @@ body {
   margin: 0 auto;
   text-align: center;
 }
+/* =========================================================
+   Bottom-right debug widget (small + out of the way)
+   ========================================================= */
+.dp-debug {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 999;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 10px 12px;
+  max-width: 260px;
+  box-shadow: 0 18px 55px rgba(0,0,0,0.45);
+}
+
+/* =========================================================
+   Make entire post card clickable (but keep controls clickable)
+   ========================================================= */
+.dp-card-click {
+  position: relative;
+}
+
+.dp-card-link {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  z-index: 0;
+  /* no background; it’s just a click layer */
+}
+
+/* Any interactive controls inside the card should sit above the overlay link */
+.dp-card-action {
+  position: relative;
+  z-index: 2;
+}
