@@ -1,128 +1,154 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
+import VinylPreviewButton from "@/app/components/VinylPreviewButton";
 
-export default function NewProjectPage() {
-  const router = useRouter();
+type ProjectRow = {
+  id: string;
+  title: string;
+  context: string | null;
+  audio_path: string | null;
+  created_at: string;
+};
 
-  const [title, setTitle] = useState("");
-  const [context, setContext] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+type ProjectWithPreview = ProjectRow & {
+  previewUrl: string | null;
+};
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setStatus(null);
+export default function HomePage() {
+  const [items, setItems] = useState<ProjectWithPreview[]>([]);
+  const [status, setStatus] = useState<string>("Loading…");
 
-    if (!file) {
-      setStatus("Please choose an audio file.");
-      return;
-    }
-
-    setBusy(true);
-
+  async function load() {
     try {
-      const ext = file.name.split(".").pop() || "audio";
-      const fileName = `${crypto.randomUUID()}.${ext}`;
-      const path = `projects/${fileName}`;
+      setStatus("Loading…");
 
-      const { error: uploadError } = await supabase.storage
-        .from("project-audio")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || "audio/mpeg",
-        });
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id,title,context,audio_path,created_at")
+        .order("created_at", { ascending: false });
 
-      if (uploadError) throw uploadError;
+      if (error) {
+        console.error(error);
+        setStatus(`❌ Supabase error: ${error.message}`);
+        return;
+      }
 
-      const { error: insertError } = await supabase.from("projects").insert({
-        title: title.trim() || "Untitled",
-        context: context.trim() || null,
-        audio_path: path,
-      });
+      const rows = (data ?? []) as ProjectRow[];
 
-      if (insertError) throw insertError;
+      const withPreviews: ProjectWithPreview[] = await Promise.all(
+        rows.map(async (p) => {
+          if (!p.audio_path) return { ...p, previewUrl: null };
 
-      router.push("/");
-      router.refresh();
+          const { data: signed, error: signErr } = await supabase.storage
+            .from("project-audio")
+            .createSignedUrl(p.audio_path, 60 * 30);
+
+          if (signErr) {
+            console.error(signErr);
+            return { ...p, previewUrl: null };
+          }
+
+          return { ...p, previewUrl: signed.signedUrl };
+        })
+      );
+
+      setItems(withPreviews);
+      setStatus(withPreviews.length ? "✅ Loaded." : "No posts yet.");
     } catch (err: any) {
       console.error(err);
-      setStatus(err?.message ?? "Something went wrong.");
-    } finally {
-      setBusy(false);
+      setStatus(`❌ Crash: ${err?.message ?? String(err)}`);
     }
   }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="dp-page">
       <div className="dp-wrap">
-        <a href="/" className="dp-meta hover:text-white">
-          ← Back
-        </a>
-
         <div className="mt-4">
-          <h1 className="dp-title">New Project</h1>
+          <h1 className="dp-title">Unfinished work</h1>
           <p className="dp-subtitle">
-            Share something unfinished. Let people respond.
+            Honest responses. Audio-first. No pretending it’s done.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 dp-card">
-          <label className="dp-meta">Title</label>
-          <input
-            className="dp-input mt-2"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Name it (or don’t)"
-          />
-
-          <div className="mt-5">
-            <label className="dp-meta">Context (optional)</label>
-            <textarea
-              className="dp-input dp-textarea mt-2"
-              value={context}
-              onChange={(e) => setContext(e.target.value)}
-              placeholder="A line or two. Where is it stuck?"
-            />
+        {/* Debug info — helps diagnose Vercel env issues */}
+        <div className="dp-card" style={{ marginTop: 14 }}>
+          <div className="dp-meta">{status}</div>
+          <div className="dp-meta" style={{ marginTop: 8 }}>
+            URL loaded:{" "}
+            {process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ yes" : "❌ missing"}
           </div>
-
-          <div className="mt-5">
-            <label className="dp-meta">Audio file</label>
-            <input
-              className="dp-input mt-2"
-              type="file"
-              accept="audio/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <p className="dp-meta mt-2">
-              mp3, wav, m4a — you can replace it anytime.
-            </p>
+          <div className="dp-meta" style={{ marginTop: 4 }}>
+            Key loaded:{" "}
+            {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "✅ yes" : "❌ missing"}
           </div>
+        </div>
 
-          {status && (
-            <div className="mt-5 rounded-xl border border-white/10 bg-black/30 p-3">
-              <p className="text-sm text-white/80">{status}</p>
-            </div>
-          )}
+        <div className="mt-6">
+          {items.length ? (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {items.map((p) => (
+                <li key={p.id} className="dp-card" style={{ marginBottom: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 14,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <a
+                        href={`/project/${encodeURIComponent(p.id)}`}
+                        style={{
+                          textDecoration: "none",
+                          color: "inherit",
+                          display: "block",
+                        }}
+                      >
+                        <div style={{ fontSize: 16, fontWeight: 800 }}>
+                          {p.title || "Untitled"}
+                        </div>
 
-          <div className="mt-6 flex justify-end gap-2">
-            <a className="dp-btn dp-btn-ghost" href="/">
-              Cancel
-            </a>
+                        {p.context ? (
+                          <div
+                            className="dp-meta"
+                            style={{
+                              marginTop: 6,
+                              overflow: "hidden",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              lineHeight: 1.45,
+                            }}
+                          >
+                            {p.context}
+                          </div>
+                        ) : (
+                          <div className="dp-meta" style={{ marginTop: 6 }}>
+                            (no context)
+                          </div>
+                        )}
+                      </a>
 
-            <button
-              className="dp-btn dp-btn-primary"
-              type="submit"
-              disabled={busy}
-            >
-              {busy ? "Publishing..." : "Publish"}
-            </button>
-          </div>
-        </form>
+                      <div className="dp-meta" style={{ marginTop: 10 }}>
+                        {new Date(p.created_at).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <VinylPreviewButton src={p.previewUrl} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </div>
     </div>
   );
