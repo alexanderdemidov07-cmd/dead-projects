@@ -122,7 +122,14 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 99;
+  pointer-events: auto;
 }
+
+.dp-topbar-inner * {
+  pointer-events: auto;
+}
+
 
 .dp-navlink {
   text-decoration: none;
