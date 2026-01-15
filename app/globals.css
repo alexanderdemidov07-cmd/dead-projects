@@ -1,26 +1,299 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================
+   Dead Projects — Zine / Flyer / Indie Label Skin
+   Updated: better readability + rock-ish font vibe
+   ========================================================= */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --dp-bg: #0b0b0b;
+  --dp-ink: rgba(255, 255, 255, 0.94);
+  --dp-muted: rgba(255, 255, 255, 0.72);
+  --dp-faint: rgba(255, 255, 255, 0.12);
+  --dp-card: rgba(255, 255, 255, 0.04);
+  --dp-card2: rgba(255, 255, 255, 0.06);
+  --dp-border: rgba(255, 255, 255, 0.16);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--dp-bg);
+  color: var(--dp-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Make default text a hair thicker & easier at night */
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+/* =========================================================
+   Global texture / grain (very subtle)
+   ========================================================= */
+
+.dp-shell {
+  min-height: 100vh;
+  background-image:
+    radial-gradient(1200px 800px at 15% 10%, rgba(255,255,255,0.06), transparent 55%),
+    radial-gradient(900px 600px at 85% 15%, rgba(255,255,255,0.05), transparent 55%),
+    radial-gradient(800px 600px at 50% 90%, rgba(255,255,255,0.04), transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.02) 0px,
+      rgba(255,255,255,0.02) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+}
+
+/* =========================================================
+   Top bar / brand
+   ========================================================= */
+
+.dp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  background: rgba(11, 11, 11, 0.74);
+  border-bottom: 1px solid var(--dp-border);
+}
+
+.dp-topbar-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.dp-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--dp-ink);
+}
+
+.dp-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dp-border);
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.07),
+    rgba(255,255,255,0.02)
+  );
+  box-shadow: 0 10px 35px rgba(0,0,0,0.35);
+}
+
+.dp-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.dp-brand-name {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  font-size: 15px;
+}
+
+.dp-brand-tag {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--dp-muted);
+  letter-spacing: 0.2px;
+}
+
+/* Centered primary action */
+.dp-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dp-navlink {
+  text-decoration: none;
+  color: var(--dp-ink);
+  font-weight: 800;
+  font-size: 14px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--dp-border);
+  background: rgba(255,255,255,0.08);
+}
+
+.dp-navlink:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+/* =========================================================
+   Page shell
+   ========================================================= */
+
+.dp-page {
+  padding: 28px 16px 40px;
+}
+
+.dp-wrap {
+  max-width: 740px;
+  margin: 0 auto;
+}
+
+/* =========================================================
+   Typography hierarchy
+   ========================================================= */
+
+.dp-title {
+  font-size: 28px;
+  font-weight: 850;
+  letter-spacing: -0.3px;
+}
+
+.dp-subtitle {
+  margin-top: 8px;
+  color: var(--dp-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.dp-meta {
+  font-size: 12px;
+  color: var(--dp-muted);
+  font-weight: 600;
+}
+
+/* =========================================================
+   Cards
+   ========================================================= */
+
+.dp-card {
+  border: 1px solid var(--dp-border);
+  background: linear-gradient(180deg, var(--dp-card2), var(--dp-card));
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+}
+
+.dp-card:hover {
+  border-color: rgba(255,255,255,0.24);
+}
+
+/* =========================================================
+   Inputs
+   ========================================================= */
+
+.dp-input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--dp-border);
+  background: rgba(0,0,0,0.35);
+  color: var(--dp-ink);
+  padding: 10px 12px;
+  outline: none;
+  font-weight: 550;
+}
+
+.dp-input:focus {
+  border-color: rgba(255,255,255,0.30);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.06);
+}
+
+.dp-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* =========================================================
+   Buttons
+   ========================================================= */
+
+.dp-btn {
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 850;
+  border: 1px solid var(--dp-border);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dp-btn-primary {
+  background: rgba(255,255,255,0.95);
+  color: #0b0b0b;
+  border-color: rgba(255,255,255,0.45);
+}
+
+.dp-btn-primary:hover {
+  background: rgba(255,255,255,1);
+}
+
+.dp-btn-ghost {
+  background: rgba(255,255,255,0.04);
+  color: var(--dp-ink);
+}
+
+.dp-btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* =========================================================
+   Vinyl preview button
+   ========================================================= */
+
+.dp-vinyl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dp-vinyl-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dp-border);
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+}
+
+.dp-vinyl-btn:hover {
+  background: rgba(255,255,255,0.11);
+}
+
+.dp-vinyl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+
+.dp-footer {
+  border-top: 1px solid var(--dp-border);
+  margin-top: 48px;
+  padding: 18px 16px 32px;
+}
+
+.dp-footer-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
 }

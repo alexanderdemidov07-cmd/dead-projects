@@ -17,12 +17,8 @@ export default function NewProjectPage() {
     e.preventDefault();
     setStatus(null);
 
-    if (!title.trim()) {
-      setStatus("Please enter a title.");
-      return;
-    }
     if (!file) {
-      setStatus("Please choose an audio file (mp3/m4a/wav).");
+      setStatus("Please choose an audio file.");
       return;
     }
 
@@ -44,7 +40,7 @@ export default function NewProjectPage() {
       if (uploadError) throw uploadError;
 
       const { error: insertError } = await supabase.from("projects").insert({
-        title: title.trim(),
+        title: title.trim() || "Untitled",
         context: context.trim() || null,
         audio_path: path,
       });
@@ -55,143 +51,79 @@ export default function NewProjectPage() {
       router.refresh();
     } catch (err: any) {
       console.error(err);
-      setStatus(`Error: ${err.message ?? "Something went wrong"}`);
+      setStatus(err?.message ?? "Something went wrong.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main style={{ maxWidth: 680, margin: "40px auto", padding: 16 }}>
-      <a href="/" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Back
-      </a>
+    <div className="dp-page">
+      <div className="dp-wrap">
+        <a href="/" className="dp-meta hover:text-white">
+          ← Back
+        </a>
 
-      <h1 style={{ fontSize: 24, fontWeight: 700 }}>New Project</h1>
-      <p style={{ marginTop: 8, color: "#555" }}>
-        Share something unfinished. Let people respond.
-      </p>
+        <div className="mt-4">
+          <h1 className="dp-title">New Project</h1>
+          <p className="dp-subtitle">
+            Share something unfinished. Let people respond.
+          </p>
+        </div>
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 18 }}>
-        <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-          Title
-        </label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g., ‘Second verse never came’"
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 10,
-            border: "1px solid #ccc",
-          }}
-        />
+        <form onSubmit={handleSubmit} className="mt-8 dp-card">
+          <label className="dp-meta">Title</label>
+          <input
+            className="dp-input mt-2"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Name it (or don’t)"
+          />
 
-        <label
-          style={{
-            display: "block",
-            fontWeight: 600,
-            marginTop: 14,
-            marginBottom: 6,
-          }}
-        >
-          Context (optional)
-        </label>
-        <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder="If you want: what feels unfinished, or what you’re hoping someone hears."
-          rows={4}
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 10,
-            border: "1px solid #ccc",
-          }}
-        />
+          <div className="mt-5">
+            <label className="dp-meta">Context (optional)</label>
+            <textarea
+              className="dp-input dp-textarea mt-2"
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              placeholder="A line or two. Where is it stuck?"
+            />
+          </div>
 
-        <label
-          style={{
-            display: "block",
-            fontWeight: 600,
-            marginTop: 14,
-            marginBottom: 6,
-          }}
-        >
-          Audio file
-        </label>
-
-        <div style={{ marginTop: 10 }}>
-          <label
-            style={{
-              display: "block",
-              border: "2px dashed #bbb",
-              borderRadius: 14,
-              padding: 16,
-              cursor: "pointer",
-              background: file ? "#f7f7f7" : "transparent",
-            }}
-          >
+          <div className="mt-5">
+            <label className="dp-meta">Audio file</label>
             <input
+              className="dp-input mt-2"
               type="file"
               accept="audio/*"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              style={{ display: "none" }}
             />
+            <p className="dp-meta mt-2">
+              mp3, wav, m4a — you can replace it anytime.
+            </p>
+          </div>
 
-            <div style={{ fontWeight: 700 }}>
-              {file ? "Audio selected" : "Upload an audio file"}
+          {status && (
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/30 p-3">
+              <p className="text-sm text-white/80">{status}</p>
             </div>
+          )}
 
-            <div style={{ marginTop: 6, color: "#666" }}>
-              {file
-                ? file.name
-                : "Click to choose a file (mp3, wav, m4a). You can replace it anytime."}
-            </div>
+          <div className="mt-6 flex justify-end gap-2">
+            <a className="dp-btn dp-btn-ghost" href="/">
+              Cancel
+            </a>
 
-            {file && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setFile(null);
-                }}
-                style={{
-                  marginTop: 10,
-                  padding: "6px 10px",
-                  borderRadius: 10,
-                  border: "1px solid #aaa",
-                  background: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                Remove file
-              </button>
-            )}
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            marginTop: 18,
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid #111",
-            background: busy ? "#ddd" : "#111",
-            color: busy ? "#333" : "#fff",
-            cursor: busy ? "not-allowed" : "pointer",
-          }}
-        >
-          {busy ? "Uploading…" : "Publish"}
-        </button>
-
-        {status && (
-          <div style={{ marginTop: 12, color: "#b00020" }}>{status}</div>
-        )}
-      </form>
-    </main>
+            <button
+              className="dp-btn dp-btn-primary"
+              type="submit"
+              disabled={busy}
+            >
+              {busy ? "Publishing..." : "Publish"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

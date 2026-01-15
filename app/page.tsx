@@ -65,7 +65,7 @@ export default function Home() {
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Dead Projects</h1>
 
       <a href="/new" style={{ display: "inline-block", marginTop: 12 }}>
-        + New Project
+        
       </a>
 
       <div style={{ marginTop: 18 }}>

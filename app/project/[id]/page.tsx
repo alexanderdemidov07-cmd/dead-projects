@@ -58,7 +58,7 @@ export default function ProjectPage() {
 
     setProject(p);
 
-    // 2) Signed URL for project audio (private bucket)
+    // 2) Signed URL for project audio
     if (p.audio_path) {
       const { data: signed, error: signError } = await supabase.storage
         .from("project-audio")
@@ -70,9 +70,11 @@ export default function ProjectPage() {
       } else {
         setProjectAudioUrl(signed.signedUrl);
       }
+    } else {
+      setProjectAudioUrl(null);
     }
 
-    // 3) Load replies
+    // 3) Load replies (newest first)
     const { data: r, error: rErr } = await supabase
       .from("replies")
       .select("id,project_id,body,audio_path,created_at")
@@ -148,7 +150,7 @@ export default function ProjectPage() {
 
       if (insertError) throw insertError;
 
-      // 3) Clear form + reload replies
+      // 3) Clear form + reload
       setReplyBody("");
       setReplyFile(null);
       setReplyStatus("✅ Posted.");
@@ -162,147 +164,139 @@ export default function ProjectPage() {
   }
 
   return (
-    <main style={{ maxWidth: 680, margin: "40px auto", padding: 16 }}>
-      <a href="/" style={{ display: "inline-block", marginBottom: 12 }}>
-        ← Back
-      </a>
+    <div className="dp-page">
+      <div className="dp-wrap">
+        <a href="/" className="dp-meta hover:text-white" style={{ textDecoration: "none" }}>
+          ← Back
+        </a>
 
-      {!project ? (
-        <div>{status}</div>
-      ) : (
-        <>
-          <h1 style={{ fontSize: 26, fontWeight: 700 }}>{project.title}</h1>
-
-          {project.context && (
-            <p style={{ marginTop: 10, color: "#555", whiteSpace: "pre-wrap" }}>
-              {project.context}
-            </p>
-          )}
-
-          <div style={{ marginTop: 18 }}>
-            {projectAudioUrl ? (
-              <audio controls src={projectAudioUrl} style={{ width: "100%" }} />
-            ) : (
-              <p style={{ color: "#666" }}>No audio file attached.</p>
-            )}
+        {!project ? (
+          <div className="dp-card" style={{ marginTop: 12 }}>
+            <div className="dp-meta">{status}</div>
           </div>
+        ) : (
+          <>
+            <div style={{ marginTop: 14 }}>
+              <h1 className="dp-title">{project.title || "Untitled"}</h1>
+              {project.context ? (
+                <p
+                  className="dp-subtitle"
+                  style={{ whiteSpace: "pre-wrap", marginTop: 10 }}
+                >
+                  {project.context}
+                </p>
+              ) : null}
 
-          <hr style={{ margin: "24px 0" }} />
+              <div style={{ marginTop: 16 }}>
+                {projectAudioUrl ? (
+                  <audio controls src={projectAudioUrl} style={{ width: "100%" }} />
+                ) : (
+                  <p className="dp-meta">No audio file attached.</p>
+                )}
+              </div>
 
-          <h2 style={{ fontSize: 18, fontWeight: 700 }}>
-  Responses <span style={{ fontSize: 12, color: "#666" }}>(newest first)</span>
-</h2>
-
-          {/* Reply form */}
-          <form onSubmit={handleAddReply} style={{ marginTop: 12 }}>
-            <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-              Add a response (audio +/or blurb)
-            </label>
-
-            <textarea
-              value={replyBody}
-              onChange={(e) => setReplyBody(e.target.value)}
-              placeholder="Try this: ‘I listened and what I felt was… so I added… because…’"
-              rows={3}
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-              }}
-            />
-
-            <div style={{ marginTop: 10 }}>
-             <div style={{ marginTop: 10 }}>
-  <label
-    style={{
-      display: "block",
-      border: "2px dashed #bbb",
-      borderRadius: 14,
-      padding: 14,
-      cursor: "pointer",
-      background: replyFile ? "#f7f7f7" : "transparent",
-    }}
-  >
-    <input
-      type="file"
-      accept="audio/*"
-      onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
-      style={{ display: "none" }}
-    />
-
-    <div style={{ fontWeight: 700 }}>
-      {replyFile ? "Reply audio selected" : "Add reply audio (optional)"}
-    </div>
-
-    <div style={{ marginTop: 6, color: "#666" }}>
-      {replyFile
-        ? replyFile.name
-        : "Click to choose an audio clip. Or just write a blurb."}
-    </div>
-
-    {replyFile && (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          setReplyFile(null);
-        }}
-        style={{
-          marginTop: 10,
-          padding: "6px 10px",
-          borderRadius: 10,
-          border: "1px solid #aaa",
-          background: "#fff",
-          cursor: "pointer",
-        }}
-      >
-        Remove file
-      </button>
-    )}
-  </label>
-</div>
-
+              <div className="dp-meta" style={{ marginTop: 10 }}>
+                {new Date(project.created_at).toLocaleString()}
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={replyBusy}
-              style={{
-                marginTop: 12,
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid #111",
-                background: replyBusy ? "#ddd" : "#111",
-                color: replyBusy ? "#333" : "#fff",
-                cursor: replyBusy ? "not-allowed" : "pointer",
-              }}
-            >
-              {replyBusy ? "Posting…" : "Post reply"}
-            </button>
+            <hr style={{ margin: "22px 0", opacity: 0.35 }} />
 
-            {replyStatus && (
-              <div style={{ marginTop: 10, color: replyStatus.startsWith("✅") ? "#0a7" : "#b00020" }}>
-                {replyStatus}
+            <h2 style={{ fontSize: 16, fontWeight: 900 }}>
+              Responses{" "}
+              <span className="dp-meta" style={{ fontWeight: 700 }}>
+                (newest first)
+              </span>
+            </h2>
+
+            {/* Reply form */}
+            <form onSubmit={handleAddReply} className="dp-card" style={{ marginTop: 12 }}>
+              <label className="dp-meta" style={{ display: "block" }}>
+                Add a response (audio +/or blurb)
+              </label>
+
+              <textarea
+                className="dp-input dp-textarea"
+                style={{ marginTop: 10 }}
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                placeholder="Try this: ‘I listened and what I felt was… so I added… because…’"
+              />
+
+              {/* Dropzone-style file chooser */}
+              <div style={{ marginTop: 12 }}>
+                <label
+                  style={{
+                    display: "block",
+                    border: "2px dashed rgba(255,255,255,0.18)",
+                    borderRadius: 16,
+                    padding: 14,
+                    cursor: "pointer",
+                    background: replyFile ? "rgba(255,255,255,0.05)" : "transparent",
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
+                    style={{ display: "none" }}
+                  />
+
+                  <div style={{ fontWeight: 900 }}>
+                    {replyFile ? "Reply audio selected" : "Add reply audio (optional)"}
+                  </div>
+
+                  <div className="dp-meta" style={{ marginTop: 6 }}>
+                    {replyFile
+                      ? replyFile.name
+                      : "Click to choose an audio clip. Or just write a blurb."}
+                  </div>
+
+                  {replyFile ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setReplyFile(null);
+                      }}
+                      className="dp-btn dp-btn-ghost"
+                      style={{ marginTop: 10 }}
+                    >
+                      Remove file
+                    </button>
+                  ) : null}
+                </label>
               </div>
-            )}
-          </form>
 
-          {/* Replies list */}
-          <div style={{ marginTop: 18 }}>
-            {replies.length === 0 ? (
-              <p style={{ color: "#666" }}>No responses yet.</p>
-            ) : (
-              <ul style={{ padding: 0, listStyle: "none" }}>
-                {replies.map((r) => (
-                  <ReplyItem key={r.id} reply={r} getAudioUrl={getReplyAudioUrl} />
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
-      )}
-    </main>
+              {replyStatus ? (
+                <div style={{ marginTop: 12 }} className="dp-meta">
+                  {replyStatus}
+                </div>
+              ) : null}
+
+              <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+                <button className="dp-btn dp-btn-primary" type="submit" disabled={replyBusy}>
+                  {replyBusy ? "Posting…" : "Post reply"}
+                </button>
+              </div>
+            </form>
+
+            {/* Replies list */}
+            <div style={{ marginTop: 14 }}>
+              {replies.length === 0 ? (
+                <p className="dp-meta">No responses yet.</p>
+              ) : (
+                <ul style={{ padding: 0, listStyle: "none", margin: 0 }}>
+                  {replies.map((r) => (
+                    <ReplyItem key={r.id} reply={r} getAudioUrl={getReplyAudioUrl} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -329,29 +323,20 @@ function ReplyItem({
   }, [reply.audio_path, getAudioUrl]);
 
   return (
-    <li
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 10,
-      }}
-    >
-      <div style={{ fontSize: 12, color: "#666" }}>
-        {new Date(reply.created_at).toLocaleString()}
-      </div>
+    <li className="dp-card" style={{ marginTop: 10 }}>
+      <div className="dp-meta">{new Date(reply.created_at).toLocaleString()}</div>
 
-      {reply.body && (
-        <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{reply.body}</div>
-      )}
+      {reply.body ? (
+        <div style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>{reply.body}</div>
+      ) : null}
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 12 }}>
         {audioUrl ? (
           <audio controls src={audioUrl} style={{ width: "100%" }} />
         ) : reply.audio_path ? (
-          <div style={{ color: "#666" }}>Loading audio…</div>
+          <div className="dp-meta">Loading audio…</div>
         ) : (
-          <div style={{ color: "#666" }}>No audio attached.</div>
+          <div className="dp-meta">No audio attached.</div>
         )}
       </div>
     </li>
